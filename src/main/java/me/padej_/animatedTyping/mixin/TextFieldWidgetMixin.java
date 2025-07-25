@@ -4,18 +4,18 @@ import me.padej_.animatedTyping.animation.AnimationHandler;
 import me.padej_.animatedTyping.config.ConfigManager;
 import me.padej_.animatedTyping.util.RemovedChar;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix3x2fStack;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -46,15 +46,15 @@ public abstract class TextFieldWidgetMixin extends ClickableWidget {
     @Shadow @Final private TextRenderer textRenderer;
     @Shadow private String text;
     @Shadow public abstract int getInnerWidth();
-    @Shadow private int textX;
     @Shadow private int selectionEnd;
     @Shadow private long lastSwitchFocusTime;
     @Shadow private BiFunction<String, Integer, OrderedText> renderTextProvider;
-    @Shadow private int textY;
-    @Shadow private boolean textShadow;
     @Shadow protected abstract int getMaxLength();
     @Shadow @Nullable private Text placeholder;
     @Shadow @Nullable private String suggestion;
+
+    @Shadow
+    protected abstract void drawSelectionHighlight(DrawContext context, int x1, int y1, int x2, int y2);
 
     @Unique private final Map<Integer, Long> charTimestamps = new HashMap<>();
     @Unique private String lastVisibleText = "";
@@ -66,66 +66,73 @@ public abstract class TextFieldWidgetMixin extends ClickableWidget {
         if (!ConfigManager.get.enabled) return;
         if (!isVisible()) return;
 
-        Matrix3x2fStack matrixStack = context.getMatrices();
+        MatrixStack matrixStack = context.getMatrices();
 
-        if (drawsBackground()) {
-            Identifier identifier = TEXTURES.get(this.isNarratable(), this.isFocused());
-            context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, identifier, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+        if (this.drawsBackground()) {
+            Identifier backgroundTexture = TEXTURES.get(this.isNarratable(), this.isFocused());
+            context.drawGuiTexture(RenderLayer::getGuiTextured, backgroundTexture, this.getX(), this.getY(), this.getWidth(), this.getHeight());
         }
 
         int textColor = this.editable ? this.editableColor : this.uneditableColor;
-        int selectionStartRel = this.selectionStart - this.firstCharacterIndex;
+        int cursorIndexRelative = this.selectionStart - this.firstCharacterIndex;
         String visibleText = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), this.getInnerWidth());
-        boolean isCursorWithInText = selectionStartRel >= 0 && selectionStartRel <= visibleText.length();
-        boolean shouldDrawCursor = this.isFocused() && (Util.getMeasuringTimeMs() - this.lastSwitchFocusTime) / 300L % 2L == 0L && isCursorWithInText;
-        int newCursorX;
-        int selectionEndRel = MathHelper.clamp(this.selectionEnd - this.firstCharacterIndex, 0, visibleText.length());
 
+        boolean isCursorVisibleInBounds = cursorIndexRelative >= 0 && cursorIndexRelative <= visibleText.length();
+        boolean showCursor = this.isFocused() && (Util.getMeasuringTimeMs() - this.lastSwitchFocusTime) / 300L % 2L == 0L && isCursorVisibleInBounds;
+
+        int textX = this.drawsBackground() ? this.getX() + 4 : this.getX();
+        int textY = this.drawsBackground() ? this.getY() + (this.getHeight() - 8) / 2 : this.getY();
+        int selectionEndRelative = MathHelper.clamp(this.selectionEnd - this.firstCharacterIndex, 0, visibleText.length());
+
+        // Обновляем анимации новых и удалённых символов
         animationHandler.updateCharacters(visibleText, lastVisibleText, charTimestamps, removedChars, textRenderer, textX);
 
-        newCursorX = animationHandler.renderLiveCharacters(context, matrixStack, visibleText, textRenderer, renderTextProvider,
-                firstCharacterIndex, charTimestamps, textX, textY, textColor, textShadow, selectionStartRel);
+        // Отрисовываем появляющиеся символы
+        int newCursorX = animationHandler.renderLiveCharacters(context, matrixStack, visibleText, textRenderer, renderTextProvider,
+                firstCharacterIndex, charTimestamps, textX, textY, textColor, true, cursorIndexRelative);
 
+        // Отрисовываем исчезающие символы
         animationHandler.renderRemovedCharacters(context, matrixStack, removedChars, textRenderer, renderTextProvider,
-                textY, textColor, textShadow);
+                textY, textColor, true);
 
         lastVisibleText = visibleText;
 
-        boolean hasMoreTextOrFull = this.selectionStart < this.text.length() || this.text.length() >= this.getMaxLength();
-        int suggestionX = newCursorX;
+        boolean hasMoreText = this.selectionStart < this.text.length() || this.text.length() >= this.getMaxLength();
+        int cursorX = newCursorX;
 
-        if (!isCursorWithInText) {
-            suggestionX = selectionStartRel > 0 ? this.textX + this.width : this.textX;
+        if (!isCursorVisibleInBounds) {
+            cursorX = cursorIndexRelative > 0 ? textX + this.width : textY;
         }
 
         if (this.placeholder != null && visibleText.isEmpty() && !this.isFocused()) {
-            context.drawTextWithShadow(this.textRenderer, this.placeholder, newCursorX, this.textY, textColor);
+            context.drawTextWithShadow(this.textRenderer, this.placeholder, cursorX, textY, textColor);
         }
 
-        if (!hasMoreTextOrFull && this.suggestion != null) {
-            context.drawText(this.textRenderer, this.suggestion, suggestionX - 1, this.textY, -8355712, this.textShadow);
+        if (!hasMoreText && this.suggestion != null) {
+            context.drawTextWithShadow(this.textRenderer, this.suggestion, cursorX - 1, textY, -8355712);
         }
 
-        if (selectionEndRel != selectionStartRel) {
-            int selectionX = this.textX + this.textRenderer.getWidth(visibleText.substring(0, selectionEndRel));
-            int selectionX1 = Math.min(suggestionX, this.getX() + this.width);
-            int selectionY1 = this.textY - 1;
-            int selectionX2 = Math.min(selectionX - 1, this.getX() + this.width);
-            int selectionY2 = this.textY + 1;
-            context.drawSelection(selectionX1, selectionY1, selectionX2, selectionY2 + 9);
+        if (selectionEndRelative != cursorIndexRelative) {
+            int selectionX = textX + this.textRenderer.getWidth(visibleText.substring(0, selectionEndRelative));
+            int selectionTop = textY - 1;
+            int selectionRight = selectionX - 1;
+            int selectionBottom = textY + 1;
+            this.drawSelectionHighlight(context, cursorX, selectionTop, selectionRight, selectionBottom + 9);
         }
 
-        if (shouldDrawCursor) {
-            if (hasMoreTextOrFull) {
-                int cursorY1 = this.textY - 1;
-                int cursorX2 = suggestionX + 1;
-                int cursorY2 = this.textY + 9;
-                context.fill(suggestionX, cursorY1, cursorX2, cursorY2, -3092272);
+        if (showCursor) {
+            if (hasMoreText) {
+                RenderLayer overlayLayer = RenderLayer.getGuiOverlay();
+                int cursorTop = textY - 1;
+                int cursorRight = cursorX + 1;
+                int cursorBottom = textY + 1;
+                context.fill(overlayLayer, cursorX, cursorTop, cursorRight, cursorBottom + 9, -3092272);
             } else {
-                context.drawText(this.textRenderer, "_", suggestionX, this.textY, textColor, this.textShadow);
+                context.drawTextWithShadow(this.textRenderer, "_", cursorX, textY, textColor);
             }
         }
 
         ci.cancel();
     }
+
 }

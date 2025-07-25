@@ -2,21 +2,21 @@ package me.padej_.animatedTyping.animation.types;
 
 import me.padej_.animatedTyping.animation.AnimationStyle;
 import me.padej_.animatedTyping.config.ConfigManager;
-import org.joml.Matrix3x2fStack;
+import net.minecraft.client.util.math.MatrixStack;
 
 public class ScalingAnimation implements AnimationStyle {
     @Override
-    public void applyLiveTransform(Matrix3x2fStack matrixStack, int cx, int textY, int charHeight, float scale) {
+    public void applyLiveTransform(MatrixStack matrixStack, int cx, int textY, int charHeight, float scale) {
         float cy = textY + charHeight / 2f;
 
-        matrixStack.pushMatrix();
-        matrixStack.translate(cx, cy);
-        matrixStack.scale(scale, scale);
-        matrixStack.translate(-cx, -cy);
+        matrixStack.push();
+        matrixStack.translate(cx, cy, 0);
+        matrixStack.scale(scale, scale, 1f);
+        matrixStack.translate(-cx, -cy, 0);
     }
 
     @Override
-    public void applyRemovedTransform(Matrix3x2fStack matrixStack, int leftX, int textY, int charHeight, float scale) {
+    public void applyRemovedTransform(MatrixStack matrixStack, int leftX, int textY, int charHeight, float scale) {
         applyLiveTransform(matrixStack, leftX, textY, charHeight, scale);
     }
 
@@ -28,6 +28,6 @@ public class ScalingAnimation implements AnimationStyle {
 
     @Override
     public float calculateEasedProgress(float progress) {
-        return (float) (1 - Math.pow(1 - progress, 3));
+        return (float)(1 - Math.pow(1 - progress, 3));
     }
 }

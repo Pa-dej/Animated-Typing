@@ -113,7 +113,7 @@ public class ConfigScreen extends Screen {
         @Override
         protected void applyValue() {
             int intValue = getIntValue();
-            onChange.accept(intValue);
+            onChange.accept(intValue); // обновляем конфиг
         }
 
         public int getIntValue() {
@@ -122,3 +122,4 @@ public class ConfigScreen extends Screen {
         }
     }
 }
+

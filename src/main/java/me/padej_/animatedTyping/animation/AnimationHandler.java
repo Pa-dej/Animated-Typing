@@ -5,8 +5,8 @@ import me.padej_.animatedTyping.config.ConfigManager;
 import me.padej_.animatedTyping.util.RemovedChar;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
-import org.joml.Matrix3x2fStack;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -39,7 +39,7 @@ public class AnimationHandler {
         }
     }
 
-    public int renderLiveCharacters(DrawContext context, Matrix3x2fStack matrixStack, String visibleText,
+    public int renderLiveCharacters(DrawContext context, MatrixStack matrixStack, String visibleText,
                                     TextRenderer textRenderer, BiFunction<String, Integer, OrderedText> renderTextProvider,
                                     int firstCharacterIndex, Map<Integer, Long> charTimestamps, int textX, int textY,
                                     int textColor, boolean textShadow, int selectionStartRel) {
@@ -71,9 +71,10 @@ public class AnimationHandler {
                 scale = style.calculateScale(appear, now);
             }
 
+            matrixStack.push();
             style.applyLiveTransform(matrixStack, charX, textY, charHeight, scale);
             context.drawText(textRenderer, ordered, charX, textY, colorToUse, textShadow);
-            matrixStack.popMatrix();
+            matrixStack.pop();
 
             if (i < selectionStartRel) {
                 newCursorX += textRenderer.getWidth(ordered);
@@ -85,8 +86,7 @@ public class AnimationHandler {
         return newCursorX;
     }
 
-
-    public void renderRemovedCharacters(DrawContext context, Matrix3x2fStack matrixStack,
+    public void renderRemovedCharacters(DrawContext context, MatrixStack matrices,
                                         Map<Integer, RemovedChar> removedChars, TextRenderer textRenderer,
                                         BiFunction<String, Integer, OrderedText> renderTextProvider,
                                         int textY, int textColor, boolean textShadow) {
@@ -105,27 +105,34 @@ public class AnimationHandler {
                 continue;
             }
 
-            float progress = 1.0f - animationStyle().calculateEasedProgress(t);
-            if (progress <= 0.01f) continue;
+            float easedProgress = animationStyle().calculateEasedProgress(t);
+            float alpha = 1.0f - easedProgress;
+            alpha = Math.max(alpha, 1f / 255f);
+
+            if (alpha <= 0.01f) {
+                iter.remove();
+                continue;
+            }
 
             OrderedText ordered = renderTextProvider.apply(String.valueOf(rc.ch()), entry.getKey());
 
-            if (animationStyle() instanceof FadeAnimation) {
-                int colorToUse = ((FadeAnimation) animationStyle()).calculateAlphaColor(textColor, progress);
-                animationStyle().applyRemovedTransform(matrixStack, rc.x(), textY, charHeight, 1f);
+            matrices.push();
+
+            if (animationStyle() instanceof FadeAnimation fade) {
+                int colorToUse = fade.calculateAlphaColor(textColor, alpha);
+                animationStyle().applyRemovedTransform(matrices, rc.x(), textY, charHeight, 1f);
                 context.drawText(textRenderer, ordered, rc.x(), textY, colorToUse, textShadow);
-                matrixStack.popMatrix();
             } else {
-                animationStyle().applyRemovedTransform(matrixStack, rc.x(), textY, charHeight, progress);
+                animationStyle().applyRemovedTransform(matrices, rc.x(), textY, charHeight, alpha);
                 context.drawText(textRenderer, ordered, rc.x(), textY, textColor, textShadow);
-                matrixStack.popMatrix();
             }
+
+            matrices.pop();
         }
     }
 
     private AnimationStyle animationStyle() {
-        AnimationType at = ConfigManager.get.animationType;
-        return switch (at) {
+        return switch (ConfigManager.get.animationType) {
             case SCALING -> new ScalingAnimation();
             case GROW -> new GrowAnimation();
             case SCROLL -> new ScrollAnimation();

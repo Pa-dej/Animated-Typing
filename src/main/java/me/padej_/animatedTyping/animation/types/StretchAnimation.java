@@ -2,24 +2,20 @@ package me.padej_.animatedTyping.animation.types;
 
 import me.padej_.animatedTyping.animation.AnimationStyle;
 import me.padej_.animatedTyping.config.ConfigManager;
-import org.joml.Matrix3x2fStack;
-
+import net.minecraft.client.util.math.MatrixStack;
 
 public class StretchAnimation implements AnimationStyle {
     @Override
-    public void applyLiveTransform(Matrix3x2fStack matrixStack, int leftX, int textY, int charHeight, float scale) {
-        matrixStack.pushMatrix();
-        matrixStack.translate(leftX, textY);
-        matrixStack.scale(scale, 1f);
-        matrixStack.translate(-leftX, -textY);
+    public void applyLiveTransform(MatrixStack matrixStack, int leftX, int textY, int charHeight, float scale) {
+        matrixStack.push();
+        matrixStack.translate(leftX, textY, 0);
+        matrixStack.scale(scale, 1f, 1f);
+        matrixStack.translate(-leftX, -textY, 0);
     }
 
     @Override
-    public void applyRemovedTransform(Matrix3x2fStack matrixStack, int leftX, int textY, int charHeight, float scale) {
-        matrixStack.pushMatrix();
-        matrixStack.translate(leftX, textY);
-        matrixStack.scale(scale, 1f);
-        matrixStack.translate(-leftX, -textY);
+    public void applyRemovedTransform(MatrixStack matrixStack, int leftX, int textY, int charHeight, float scale) {
+        applyLiveTransform(matrixStack, leftX, textY, charHeight, scale);
     }
 
     @Override
@@ -33,4 +29,3 @@ public class StretchAnimation implements AnimationStyle {
         return (float) (1 - Math.pow(1 - progress, 3));
     }
 }
-

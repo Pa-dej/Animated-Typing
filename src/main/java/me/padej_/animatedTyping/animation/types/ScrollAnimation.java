@@ -2,20 +2,19 @@ package me.padej_.animatedTyping.animation.types;
 
 import me.padej_.animatedTyping.animation.AnimationStyle;
 import me.padej_.animatedTyping.config.ConfigManager;
-import org.joml.Matrix3x2fStack;
+import net.minecraft.client.util.math.MatrixStack;
 
 public class ScrollAnimation implements AnimationStyle {
     @Override
-    public void applyLiveTransform(Matrix3x2fStack matrixStack, int leftX, int baselineY, int charHeight, float scale) {
-
-        matrixStack.pushMatrix();
-        matrixStack.translate(leftX, baselineY);
-        matrixStack.scale(1f, scale);
-        matrixStack.translate(-leftX, -baselineY);
+    public void applyLiveTransform(MatrixStack matrixStack, int leftX, int baselineY, int charHeight, float scale) {
+        matrixStack.push();
+        matrixStack.translate(leftX, baselineY, 0);
+        matrixStack.scale(1f, scale, 1f);
+        matrixStack.translate(-leftX, -baselineY, 0);
     }
 
     @Override
-    public void applyRemovedTransform(Matrix3x2fStack matrixStack, int leftX, int textY, int charHeight, float scale) {
+    public void applyRemovedTransform(MatrixStack matrixStack, int leftX, int textY, int charHeight, float scale) {
         applyLiveTransform(matrixStack, leftX, textY, charHeight, scale);
     }
 

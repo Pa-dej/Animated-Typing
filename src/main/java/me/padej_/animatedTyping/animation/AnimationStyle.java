@@ -1,10 +1,10 @@
 package me.padej_.animatedTyping.animation;
 
-import org.joml.Matrix3x2fStack;
+import net.minecraft.client.util.math.MatrixStack;
 
 public interface AnimationStyle {
-    void applyLiveTransform(Matrix3x2fStack matrixStack, int leftX, int textY, int charHeight, float scale);
-    void applyRemovedTransform(Matrix3x2fStack matrixStack, int leftX, int textY, int charHeight, float scale);
+    void applyLiveTransform(MatrixStack matrices, int leftX, int textY, int charHeight, float scale);
+    void applyRemovedTransform(MatrixStack matrices, int leftX, int textY, int charHeight, float scale);
 
     float calculateScale(long appearTime, long currentTime);
     float calculateEasedProgress(float progress);
