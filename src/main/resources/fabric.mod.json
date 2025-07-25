@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "animated_typing",
+  "version": "${version}",
+  "name": "Animated Typing",
+  "description": "",
+  "authors": ["Padej_"],
+  "contact": {},
+  "license": "unlicense",
+  "icon": "assets/animated_typing/icon.png",
+  "environment": "client",
+  "mixins": [
+    "animatedTyping.mixins.json"
+  ],
+  "entrypoints": {
+    "main": [
+      "me.padej_.animatedTyping.AnimatedTyping"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": ">=1.21.6 <=1.21.8"
+  }
+}
