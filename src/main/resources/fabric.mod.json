@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "animatedtyping-1_21_11",
+  "version": "${version}",
+  "name": "AnimatedTyping-1.21.11",
+  "description": "Animated typing effect for text fields",
+  "authors": ["Padej_"],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/animatedtyping-1_21_11/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "padej.animatedtyping.client.MainClient"
+    ],
+    "main": [
+      "padej.animatedtyping.Main"
+    ]
+  },
+  "mixins": [
+    "animatedTyping.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": ">=1.21.9 <=1.21.11"
+  }
+}
