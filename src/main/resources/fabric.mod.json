@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "animated_typing",
   "version": "${version}",
-  "name": "AnimatedTyping-1.21.11",
+  "name": "Animated Typing",
   "description": "Animated typing effect for text fields",
   "authors": ["Padej_"],
   "contact": {},
@@ -23,6 +23,6 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
-    "minecraft": "1.21.11"
+    "minecraft": ">=1.21.11 <=1.21.11"
   }
 }
